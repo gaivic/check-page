@@ -17,8 +17,41 @@ function style(color) {
     };
 }
 
+
 function App() {
     const [sizes, setSizes] = useState(['43%', '57%']);
+    const [active, setActive] = useState(1); // Initialize with a default value
+
+    // schedule dynamically change
+    const schedule = [
+        [
+            { placeId: "ChIJUZ-WfXKpQjQR0j4ggToD89A" },
+            { placeId: "ChIJxccAAQ2pQjQRgGoVa3_yuI4" }
+        ],
+        [
+            { placeId: "ChIJWfZUVq6pQjQR3Z-1OU8ILgo" },
+            { placeId: "ChIJnzZlOoCpQjQRH-WG9egh-2E" },
+            { placeId: "ChIJDRFd54KrQjQRMVgkMiJTbMM" }
+        ],
+        [
+            { placeId: "ChIJP7Zo9S6nQjQRK2KoXGG9_w8" },
+            { placeId: "ChIJZdTFIrmfQjQRJ1tSbSwM_Go" }
+        ],
+        [
+            { placeId: "ChIJWfZUVq6pQjQR3Z-1OU8ILgo" },
+            { placeId: "ChIJnzZlOoCpQjQRH-WG9egh-2E" },
+            { placeId: "ChIJDRFd54KrQjQRMVgkMiJTbMM" }
+        ],
+        [
+            { placeId: "ChIJWfZUVq6pQjQR3Z-1OU8ILgo" },
+            { placeId: "ChIJZdTFIrmfQjQRJ1tSbSwM_Go" },
+            { placeId: "ChIJUZ-WfXKpQjQR0j4ggToD89A" }
+        ]
+    ];
+
+    const handleDayClick = (day) => {
+        setActive(day);
+    };
 
     return (
         <div style={{ height: '100vh' }}>
@@ -31,15 +64,15 @@ function App() {
                 )}
             >
                 <Pane minSize='35%' maxSize='54%'>
-                    <TripPlan />
+                    <TripPlan active={active} onDayClick={handleDayClick} schedule={schedule} />
                 </Pane>
-                <Pane >
-                    <Map />
+                <Pane>
+                    <Map active={active} schedule={schedule}/>
                 </Pane>
             </SplitPane>
         </div>
     );
-};
+}
 
 export default App;
 

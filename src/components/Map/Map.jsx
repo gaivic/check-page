@@ -1,42 +1,37 @@
-import React, { useState, useRef } from 'react';
-import { GoogleMap, MarkerF, InfoWindowF, useLoadScript } from '@react-google-maps/api';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+    GoogleMap,
+    MarkerF,
+    InfoWindowF,
+    useLoadScript,
+    Autocomplete,
+    DirectionsRenderer,
+} from '@react-google-maps/api';
 import SearchBox from '../SearchBox';
-import PlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-places-autocomplete';
-
-
-
-
+import { Input, Button } from "@material-tailwind/react";
+import { HiSearch } from "react-icons/hi";
+import routes from "./routes.json";
 
 const mapContainerStyle = {
     // width: '100%',
     height: '100vh'
 };
 
-// const center = {
-//     lat: 25.012622,
-//     lng: 121.544055
 
-// };
+let directionsService;
 
 
-const divStyle = {
-    background: `white`,
-    border: `1px solid #ccc`,
-    padding: 15
-}
+const Map = ({active, schedule}) => {
 
-const Map = () => {
-    const { isLoaded } = useLoadScript({
-        googleMapsApiKey: "AIzaSyADT-3r180WBMfOUuy2vVl-0lfmRPhFhOQ",
-        libraries: ["places"],
-
-    });
 
     const [mapRef, setMapRef] = useState();
     const [isOpen, setIsOpen] = useState(false);
     const [infoWindowData, setInfoWindowData] = useState();
-    const autocompleteRef = useRef(null);
-    const [address, setAddress] = useState('');
+
+    const [map, setMap] = useState(null);
+    const [directionsResponse, setDirectionsResponse] = useState(null);
+    const originRef = useRef();
+    const destiantionRef = useRef();
 
 
     const markers = [
@@ -57,12 +52,29 @@ const Map = () => {
         },
     ];
 
+    // the map onLoad will fit bound in day1 places  
     const onMapLoad = (map) => {
         setMapRef(map);
         const bounds = new window.google.maps.LatLngBounds();
-        markers?.forEach(({ lat, lng }) => bounds.extend({ lat, lng }));
-        map.fitBounds(bounds);
+
+        const service = new window.google.maps.places.PlacesService(map);
+
+        const day1Places = schedule[0].map((place) => place.placeId);
+        day1Places.forEach((placeId) => {
+            service.getDetails({
+                placeId: placeId
+            }, (result, status) => {
+                if (status !== window.google.maps.places.PlacesServiceStatus.OK) {
+                    alert(status);
+                    return;
+                }
+
+                bounds.extend(result.geometry.location);
+                map.fitBounds(bounds);
+            });
+        });
     };
+
 
     const handleMarkerClick = (id, lat, lng, address) => {
         mapRef?.setZoom(15);
@@ -71,28 +83,127 @@ const Map = () => {
         setIsOpen(true);
     };
 
-    const handleSelect = async (value) => {
-        const results = await geocodeByAddress(value);
-        const latLng = await getLatLng(results[0]);
-        console.log('Selected Address:', value);
-        console.log('Coordinates:', latLng);
+    //function that is calling the directions service
+
+    async function calculateRoute() {
+        const directionsService = new window.google.maps.DirectionsService();
+
+        const activeSchedule = schedule[active-1];
+
+        const origin = activeSchedule[0].placeId;
+        const destination = activeSchedule[activeSchedule.length - 1].placeId;
+        const waypoints = activeSchedule.slice(1, -1).map((place) => ({
+            location: { placeId: place.placeId },
+            stopover: true,
+        }));
+
+        console.log(origin, destination, waypoints);
+        // call getDirection function
+        getDirection(origin, destination, waypoints);
+    }
+
+
+    const getDirection = (originPlaceId, destinationPlaceId, waypoints) => {
+        const directionsService = new window.google.maps.DirectionsService();
+
+        const origin = { placeId: originPlaceId };
+        const destination = { placeId: destinationPlaceId };
+
+        if (waypoints.length >= 1) {
+            directionsService.route(
+                {
+                    origin,
+                    destination,
+                    travelMode: window.google.maps.TravelMode.DRIVING,
+                    waypoints,
+                },
+                (result, status) => {
+                    if (status === window.google.maps.DirectionsStatus.OK) {
+                        //changing the state of directions to the result of direction service
+                        setDirectionsResponse(result);
+                    } else {
+                        console.error(`error fetching directions ${result}`);
+                    }
+                }
+            );
+        } else {
+            directionsService.route(
+                {
+                    origin,
+                    destination,
+                    travelMode: window.google.maps.TravelMode.DRIVING,
+                },
+                (result, status) => {
+                    if (status === window.google.maps.DirectionsStatus.OK) {
+                        //changing the state of directions to the result of direction service
+                        setDirectionsResponse(result);
+                    } else {
+                        console.error(`error fetching directions ${result}`);
+                    }
+                }
+            );
+        }
     };
 
+    useEffect(()=> {
+        calculateRoute()
+    }, [active])
 
     return (
         <div >
-            {!isLoaded ? (
-                <div className='container pt-5'><h2 className='text-center'>Loading...</h2></div>
-            ) : (
-                <>
+                <div className="relative">
+                    {/* <div className="grid grid-cols-3 gap-4">
+                        <div className="z-10 my-2">
+                            <Autocomplete>
+
+                                <input
+                                    label="Search"
+                                    icon={<i className="fas fa-search" />}
+                                    className='bg-white'
+                                    ref={originRef}
+                                />
+                            </Autocomplete>
+
+                        </div>
+                        <div className="z-10  my-2">
+                            <Autocomplete>
+                                <input
+                                    label="Search"
+                                    icon={<i className="fas fa-search" />}
+                                    className='bg-white'
+                                    ref={destiantionRef}
+                                />
+                            </Autocomplete>
+                        </div>
+                        <div className="z-10  my-2">
+                            <Button
+                                type="submit"
+                                name="submit"
+                                onClick={calculateRoute}
+                            >
+                                Search
+                            </Button>
+
+                        </div>
+                    </div> */}
+
                     <GoogleMap
                         mapContainerStyle={mapContainerStyle}
-                        onLoad={onMapLoad}
+                        onLoad={(map) => onMapLoad(map)}
                         onClick={() => setIsOpen(false)}
+                        options={{
+                            zoomControl: false,
+                            streetViewControl: false,
+                            mapTypeControl: false,
+                            fullscreenControl: false,
+                        }}
+                        className="z-0"
                     >
-                        {/* <SearchBox/> */}
-                        {markers.map(({ address, lat, lng }, ind) => (
+                        {directionsResponse && (
+                            <DirectionsRenderer directions={directionsResponse} />
+                        )}
 
+                        {/* {markers.map(({ address, lat, lng }, ind) => (
                             <MarkerF
                                 key={ind}
                                 position={{ lat, lng }}
@@ -110,10 +221,9 @@ const Map = () => {
                                     </InfoWindowF>
                                 )}
                             </MarkerF>
-                        ))}
+                        ))} */}
                     </GoogleMap>
-                </>
-            )}
+                </div>
         </div>
     );
 };
@@ -121,83 +231,3 @@ const Map = () => {
 export default Map;
 
 
-// const Map = () => {
-//     const { isLoaded } = useLoadScript({
-//         googleMapsApiKey: "AIzaSyADT-3r180WBMfOUuy2vVl-0lfmRPhFhOQ"
-//     });
-//     const onLoad = infoWindow => {
-//         console.log('infoWindow: ', infoWindow)
-//     }
-
-
-
-//     return (
-//         <div>
-//             {!isLoaded ? (
-//                 <h1>Loading...</h1>
-//             ) : (
-//                 <GoogleMap
-//                     id="InfoWindow-example"
-//                     mapContainerStyle={mapContainerStyle}
-//                     zoom={13}
-//                     center={center}
-//                 >
-
-//                     {/* <InfoWindow
-//                             onLoad={onLoad}
-//                             position={position}
-//                         >
-//                             <div style={divStyle}>
-//                                 <h1>InfoWindow</h1>
-//                             </div>
-//                         </InfoWindow> */}
-//                     <MarkerF position={position} icon={"http://maps.google.com/mapfiles/ms/icons/green-dot.png"} />
-//                 </GoogleMap>
-//             )}
-//         </div>
-//     );
-// };
-
-// export default Map;
-
-
-// import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
-
-
-// const containerStyle = {
-//     width: '100%',
-//     height: '100vh'
-// };
-
-// const Map = () => {
-//     const { isLoaded } = useLoadScript({
-//         googleMapsApiKey: "AIzaSyADT-3r180WBMfOUuy2vVl-0lfmRPhFhOQ",
-//     });
-//     const markers = [
-//         { lat: 18.5204, lng: 73.8567 },
-//         { lat: 18.5314, lng: 73.8446 },
-//         { lat: 18.5642, lng: 73.7769 },
-//     ];
-
-//     const onLoad = (map) => {
-//         const bounds = new window.google.maps.LatLngBounds();
-//         markers?.forEach(({ lat, lng }) => bounds.extend({ lat, lng }));
-//         map.fitBounds(bounds);
-//     };
-
-//     return (
-//         <div >
-//             {!isLoaded ? (
-//                 <h1>Loading...</h1>
-//             ) : (
-//                 <GoogleMap mapContainerStyle={containerStyle} onLoad={onLoad}>
-//                     {markers.map(({ lat, lng }) => (
-//                         <Marker position={{ lat, lng }} />
-//                     ))}
-//                 </GoogleMap>
-//             )}
-//         </div>
-//     );
-// };
-
-// export default Map;
