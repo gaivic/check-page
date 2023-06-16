@@ -6,6 +6,7 @@ import Map from './components/Map/Map'
 import React, { useState } from 'react';
 import SplitPane, { Pane, SashContent } from 'split-pane-react';
 import 'split-pane-react/esm/themes/default.css';
+import { Button } from '@material-tailwind/react';
 
 function style(color) {
     return {
@@ -23,7 +24,7 @@ function App() {
     const [active, setActive] = useState(1); // Initialize with a default value
 
     // schedule dynamically change
-    const schedule = [
+    const [schedule, setSchedule] = useState([
         [
             { placeId: "ChIJUZ-WfXKpQjQR0j4ggToD89A" },
             { placeId: "ChIJxccAAQ2pQjQRgGoVa3_yuI4" }
@@ -47,11 +48,19 @@ function App() {
             { placeId: "ChIJZdTFIrmfQjQRJ1tSbSwM_Go" },
             { placeId: "ChIJUZ-WfXKpQjQR0j4ggToD89A" }
         ]
-    ];
+    ]);
 
     const handleDayClick = (day) => {
         setActive(day);
     };
+
+    const addDay = () => {
+        const newDay = [{ placeId: "ChIJUZ-WfXKpQjQR0j4ggToD89A" },
+        { placeId: "ChIJxccAAQ2pQjQRgGoVa3_yuI4" }];
+        setSchedule([...schedule, newDay]);
+    };
+      
+      
 
     return (
         <div style={{ height: '100vh' }}>
@@ -65,6 +74,9 @@ function App() {
             >
                 <Pane minSize='35%' maxSize='54%'>
                     <TripPlan active={active} onDayClick={handleDayClick} schedule={schedule} />
+                    <div class="flex flex-col justify-center items-center">
+                        <Button classname="addDay" onClick={addDay}>+ Add day</Button>
+                    </div>
                 </Pane>
                 <Pane>
                     <Map active={active} schedule={schedule}/>
